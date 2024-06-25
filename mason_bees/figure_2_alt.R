@@ -1,6 +1,6 @@
 # Header----
 # Manuscript draft
-# Provisory tittle: Conventional agriculture interferes with sex communication in a wild bee with negative impacts on local population size
+# Conventional agriculture interferes with sex communication and impacts on local population size in a wild bee
 
 # Authors: Samuel Boff1*, Sara Olberz1, Irem Gülsoy2, Marvin Preuß1,  Josué Raizer3, Manfred Ayasse1
 

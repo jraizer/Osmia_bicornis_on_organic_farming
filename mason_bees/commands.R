@@ -1,6 +1,6 @@
 # Header----
 # Manuscript draft
-# Provisory tittle: Conventional agriculture interferes with sex communication in a wild bee with negative impacts on local population size
+# Conventional agriculture interferes with sex communication and impacts on local population size in a wild bee
 
 # Authors: Samuel Boff1*, Sara Olberz1, Irem Gülsoy2, Marvin Preuß1,  Josué Raizer3, Manfred Ayasse1
 
@@ -747,27 +747,24 @@ stripchart(exp_1$Male_latency, method = "stack")
 stripchart(exp_1$Male_latency ~ exp_1$Farm_system, method = "stack")
 boxplot(exp_1$Male_latency ~ exp_1$Farm_system)
 
-
-male_lat_mod <- lmer(Male_latency ~ Farm_system + 
+### Generalized linear mixed-effect model----
+male_lat_mod <- glmer(Male_latency ~ Farm_system + 
                         (1 | Female_ID), 
-                       data = exp_1)
+                       data = exp_1,
+                      family = poisson)
 
 #### Assumptions test (DHARMa) of the selected model----
 # Residuals simulation
 resid_male_lat <- DHARMa::simulateResiduals(fittedModel = male_lat_mod, 
                                            n = 1000) 
 plot(resid_male_lat) 
-DHARMa::plotQQunif(resid_male_lat) #
-DHARMa::plotResiduals(resid_male_lat) #
-DHARMa::testDispersion(resid_male_lat)
-DHARMa::outliers(resid_male_lat)
-
 
 ### Global significance of the selected model----
-size_null_mod <- lme4::lmer(Size ~ 1 +
-                              (1 | Site/Station), 
-                            data = envi_non_na)
-anova(size_null_mod, size_sel_mod)
+male_lat_null <- lme4::lmer(Male_latency ~ 1 + 
+                              (1 | Female_ID), 
+                            data = exp_1)
+anova(male_lat_null, male_lat_mod)
+# no significant
 
 ### Hypothesis test----
 summary(male_lat_mod)
