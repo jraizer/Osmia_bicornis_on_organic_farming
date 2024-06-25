@@ -37,12 +37,14 @@ bees <- bees[-which(is.na(bees$Organicity_rev) == T), ] #sites excluded
 reprod <- readxl::read_excel("data/reprod.xlsx") #additional reproduction data
 meadow <- readxl::read_excel("data/meadow.xlsx") #flower abundance in meadows
 exp_1 <- readxl::read_excel("data/experiment_1.xlsx") #data from experiment 1
+exp_2 <- readxl::read_excel("data/experiment_2.xlsx") #data from experiment 2
 
 ### Inspect
 str(bees)
 str(reprod)
 str(meadow)
 str(exp_1)
+str(exp_2)
 
 unique(bees$Farm) # 11 farms
 unique(bees$Site) # 15 sites
@@ -733,12 +735,7 @@ legend("topright",
        cex = .75)
 dev.off()
 
-
-# Male choice----
-#Exposing males of Osmia bicornis to females originally
-#from organic and conventional farms. In the flight cage there is 5 males and 
-#two frezzed-killied females from these two different farming management.
-
+# Male choice (experiment 1)----
 str(exp_1)
 
 ## Male latency----
@@ -748,23 +745,11 @@ stripchart(exp_1$Male_latency ~ exp_1$Farm_system, method = "stack")
 boxplot(exp_1$Male_latency ~ exp_1$Farm_system)
 
 ### Generalized linear mixed-effect model----
+male_lat_mod <- lm(Male_latency ~ Farm_system, data = exp_1)
 male_lat_mod <- glmer(Male_latency ~ Farm_system + 
                         (1 | Female_ID), 
                        data = exp_1,
                       family = poisson)
-
-#### Assumptions test (DHARMa) of the selected model----
-# Residuals simulation
-resid_male_lat <- DHARMa::simulateResiduals(fittedModel = male_lat_mod, 
-                                           n = 1000) 
-plot(resid_male_lat) 
-
-### Global significance of the selected model----
-male_lat_null <- lme4::lmer(Male_latency ~ 1 + 
-                              (1 | Female_ID), 
-                            data = exp_1)
-anova(male_lat_null, male_lat_mod)
-# no significant
 
 ### Hypothesis test----
 summary(male_lat_mod)
@@ -816,3 +801,226 @@ TIME<-ggplot(Dataset, aes(x = Farm, y =Touching_Time_Second, fill = Farm)) +
         axis.title = element_text(size = 14))  # Increase the size of axis titles
 # Add significance symbols for multiple comparisons
 
+
+#Time males spend touching females
+Time_touching<-glmer(Antennation_Time_interval_sec~Farm+(1|Female_ID), Dataset, family= "poisson")
+summary(Time_touching)                     
+Anova(Time_touching)
+
+#Response: Antennation_Time_interval_sec
+#Chisq Df Pr(>Chisq)  
+#Farm 4.7541  1    0.02923 *
+
+# Define the order of variables
+variable_order <- c("Organic", "Conventional")
+
+# Define colors for fill
+variable_colors <- c("Organic" = "skyblue", "Conventional" = "orange")
+# Define color for data points
+data_point_color <- "#FF69B4"  # Pink color for data points
+
+# Create a factor variable with the desired order
+Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
+
+# Plot the figure
+antenT<-ggplot(Dataset, aes(x = Farm, y =Antennation_Time_interval_sec, fill = Farm)) +
+  geom_boxplot(color = "black") +
+  # geom_jitter(color = "black", fill = data_point_color, width = 0.2, height = 0, shape = 21, size = 3) +  # Add data points with black border
+  # Customize other plot aesthetics as needed
+  scale_fill_manual(values = variable_colors) +
+  xlab("Female origin") +
+  ylab("Time antennating with female (s)") +
+  geom_signif(y_position=150, xmin=0.7, xmax= 2.35,
+              annotation="*", tip_length=0)+
+  theme_classic()+theme(axis.text=element_text(size=17), axis.title=element_text(size=18,face="bold"))+
+  labs(title = "") +  # Add the title of the plot if needed
+  theme_classic() +  # Apply the classic theme
+  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
+        axis.title = element_text(size = 14))  # Increase the size of axis titles
+# Add significance symbols for multiple comparisons
+
+Time_mounting<-glmer(Mounting_Time_interval_sec~Farm+(1|Female_ID), Dataset, family= "poisson")
+summary(Time_mounting)                     
+Anova(Time_mounting)
+
+#Analysis of Deviance Table (Type II Wald chisquare tests)
+
+#Response: Mounting_Time_interval_sec
+#Chisq Df Pr(>Chisq)
+#Farm 0.5801  1     0.4463
+boxplot(Dataset$Mounting_Time_interval_sec~Dataset$Farm)
+# Define the order of variables
+variable_order <- c("Organic", "Conventional")
+
+# Define colors for fill
+variable_colors <- c("Organic" = "#FFFFFF", "Conventional" = "#84BEEF")
+# Define color for data points
+data_point_color <- "#FF69B4"  # Pink color for data points
+
+# Create a factor variable with the desired order
+Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
+
+# Plot the figure
+ggplot(Dataset, aes(x = Farm, y =Mounting_Time_interval_sec, fill = Farm)) +
+  geom_boxplot(color = "black") +
+  geom_jitter(color = "black", fill = data_point_color, width = 0.1, height = 0, shape = 21, size = 3) +  # Add data points with black border
+  # Customize other plot aesthetics as needed
+  scale_fill_manual(values = variable_colors) +
+  xlab("Female origin") +
+  ylab("Time male mounts the female (S)") +
+  labs(title = "") +  # Add the title of the plot if needed
+  theme_classic() +  # Apply the classic theme
+  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
+        axis.title = element_text(size = 14))  # Increase the size of axis titles
+# Add significance symbols for multiple comparisons
+
+
+Copulation_attempt<-glmer(Copulation_Attempt~Farm+(1|Female_ID), Dataset, family= "binomial")
+summary(Copulation_attempt)                     
+Anova(Copulation_attempt)
+boxplot(Dataset$Copulation_Attempt~Dataset$Farm)
+#Response: Copulation_Attempt
+#Chisq Df Pr(>Chisq)  
+#Farm 3.4942  1    0.06158 .
+
+boxplot(Dataset$Copulation_Attempt~Dataset$Farm)
+# Define the order of variables
+variable_order <- c("Organic", "Conventional")
+
+# Define colors for fill
+variable_colors <- c("Organic" = "skyblue", "Conventional" = "orange")
+# Define color for data points
+data_point_color <- "#FF69B4"  # Pink color for data points
+
+# Create a factor variable with the desired order
+Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
+
+# Plot the figure
+cop<-ggplot(Dataset, aes(x = Farm, y =Copulation_Attempt, fill = Farm)) +
+  geom_col(color = "black") +
+  geom_jitter(color = "black", fill = data_point_color, width = 0.1, height = 0, shape = 21, size = 3) +  # Add data points with black border
+  # Customize other plot aesthetics as needed
+  scale_fill_manual(values = variable_colors) +
+  geom_signif(y_position=2, xmin=0.7, xmax= 2.35,
+              annotation=".", tip_length=0)+
+  xlab("Female origin") +
+  ylab("Copulation attempt events") +
+  labs(title = "") +  # Add the title of the plot if needed
+  theme_classic() +  # Apply the classic theme
+  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
+        axis.title = element_text(size = 14))  # Increase the size of axis titles
+
+Wing_fanning<-glmer(Wing_fanning~Farm+(1|Female_ID), Dataset, family= "binomial")
+summary(Wing_fanning)                     
+Anova(Wing_fanning)
+#Response: Wing_fanning
+#Chisq Df Pr(>Chisq)  
+#Farm 4.2993  1    0.03813 *
+
+boxplot(Dataset$Wing_fanning~Dataset$Farm)
+
+
+
+variable_order <- c("Organic", "Conventional")
+
+# Define colors for fill
+variable_colors <- c("Organic" = "skyblue", "Conventional" = "orange")
+# Define color for data points
+data_point_color <- "#FF69B4"  # Pink color for data points
+
+# Create a factor variable with the desired order
+Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
+
+boxplot((Dataset$Wing_fanning~Dataset$Farm))
+
+# Plot the figure
+Wing<-ggplot(Dataset, aes(x = Farm, y =Wing_fanning, fill = Farm)) +
+  geom_boxplot(color = "black") +
+  geom_jitter(color = "black", fill = data_point_color, width = 0.1, height = 0, shape = 21, size = 3) +  # Add data points with black border
+  # Customize other plot aesthetics as needed
+  scale_fill_manual(values = variable_colors) +
+  geom_signif(y_position=1.5, xmin=0.7, xmax= 2.35,
+              annotation="*", tip_length=0)+
+  xlab("Female origin") +
+  ylab("Wing fanning events") +
+  labs(title = "") +  # Add the title of the plot if needed
+  theme_classic() +  # Apply the classic theme
+  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
+        axis.title = element_text(size = 14))  # Increase the size of axis titles
+
+###FIGURE SIGNIFICANT RESULTS
+##FAZER FIGURA COM MÚLTIPLOS GRÁFICOS
+library("gridExtra")
+grid.arrange(             # First row with one plot spaning over 2 columns
+  arrangeGrob(TIME,antenT,Wing,cop,ncol = 2), # Second row with 2 plots in 2 different columns
+  nrow = 1)  
+
+
+
+###Experiment 3-> exposing females from organic farms to two compounds (z)-11-Heptacosene and (z)-9-Nonacosene and watching precopulatory behavior of males
+setwd("~/OneDrive/Alunos/Irem_Gülsoy")
+Dataset<-read_excel(file.choose())
+View(Dataset)
+str(Dataset)
+Dataset$Application<-as.factor(Dataset$Application)
+shapiro.test(Dataset$Antennation_Time_interval_Seconds) #p<0.05
+
+Anten_time<-glmer (Antennation_Time_interval_Seconds~Application+(1|Female_ID), Dataset, family = "poisson")
+summary(Anten_time)
+Anova(Anten_time)
+#Response: Antennation_Time_interval_Seconds
+#Chisq Df Pr(>Chisq)
+#Application  1.13  1     0.2878
+
+Mounting_Time<-glmer(Mounting_Time_interval_seconds~Application+(1|Female_ID), Dataset, family = "poisson")
+summary(Mounting_Time)
+Anova(Mounting_Time)
+#Response: Mounting_Time_interval_seconds
+#Chisq Df Pr(>Chisq)
+#Application 0.4171  1     0.5184
+
+wing_fan<-glmer(Wing_fanning~Application+(1|Female_ID), Dataset, family = "binomial")
+summary(wing_fan)
+Anova(wing_fan)
+#Response: Wing_fanning
+#Chisq Df Pr(>Chisq)  
+#Application 6.0024  1    0.01429 *
+
+variable_order <- c("Pentane", "(Z)11_C27en+(Z)9_C29en")
+
+# Define colors for fill
+variable_colors <- c("Pentane" = "skyblue", "(Z)11_C27en+(Z)9_C29en" = "orange")
+# Define color for data points
+data_point_color <- "#FF69B4"  # Pink color for data points
+
+# Create a factor variable with the desired order
+Dataset$Application <- factor(Dataset$Application, levels = variable_order)
+
+# Plot the figure
+ggplot(Dataset, aes(x = Application, y =Wing_fanning, fill = Application)) +
+  geom_col(color = "black") +
+  #geom_jitter(color = "black", fill = data_point_color, width = 0.1, height = 0, shape = 21, size = 3) +  # Add data points with black border
+  # Customize other plot aesthetics as needed
+  scale_fill_manual(values = variable_colors) +
+  geom_signif(y_position=25, xmin=0.7, xmax= 2.35,
+              annotation="*", tip_length=0)+
+  xlab("Chemical compounds") +
+  ylab("Wing fanning events") +
+  labs(title = "") +  # Add the title of the plot if needed
+  theme_classic() +  # Apply the classic theme
+  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
+        axis.title = element_text(size = 14))  # Increase the size of axis titles
+
+copul<-glmmTMB(Copulation_Attempt~Application+(1|Female_ID), Dataset, family = "binomial")
+summary(copul)
+Anova(copul)
+#Response: Copulation_Attempt
+#Chisq Df Pr(>Chisq)
+#Application     0  1     0.9995
+
+compet<-glmer(Competition~Application+(1|Female_ID), Dataset, family = "binomial")
+summary(copul)
+Anova(copul)
+#Response: Copulation_Attempt
+#Chisq Df Pr(>Chisq)
+#Application     0  1     0.9995
