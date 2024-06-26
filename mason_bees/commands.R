@@ -28,6 +28,9 @@ library(pwr)
 library(vegan)
 library(kableExtra)
 library(ggplot2)
+library(ggsignif)
+library(grid)
+library(cowplot)
 
 ## Data----
 ### Import
@@ -198,7 +201,7 @@ summary(nest_freq_model)
 car::Anova(nest_freq_model)
 
 ### Plot----
-scatter <- ggplot(reprod_no_na, 
+scatter <- ggplot(reprod, 
                   aes(Organicity_rev, nest_corrected)) + 
   theme_classic(30) + 
   geom_point(size = 3)
@@ -739,14 +742,15 @@ dev.off()
 str(exp_1)
 
 ## Male latency----
+#With the stopwatch we monitor the time (seconds) needed for a given male to interact with a given females
+
 #Inspect
 stripchart(exp_1$Male_latency, method = "stack")
 stripchart(exp_1$Male_latency ~ exp_1$Farm_system, method = "stack")
 boxplot(exp_1$Male_latency ~ exp_1$Farm_system)
 
 ### Generalized linear mixed-effect model----
-male_lat_mod <- lm(Male_latency ~ Farm_system, data = exp_1)
-male_lat_mod <- glmer(Male_latency ~ Farm_system + 
+male_lat_mod <- lme4::glmer(Male_latency ~ Farm_system + 
                         (1 | Female_ID), 
                        data = exp_1,
                       family = poisson)
@@ -755,272 +759,232 @@ male_lat_mod <- glmer(Male_latency ~ Farm_system +
 summary(male_lat_mod)
 car::Anova(male_lat_mod)
 
-## Time latency, time interval until males interact with females
-A1st_touching <- glmer(st_touch ~ Farm_system + (1|Female_ID), 
-                       data = exp_1, family = "binomial")
-summary(A1st_touching)                     
-Anova(A1st_touching)
+## Frequency of first interaction----
+#We count to all males whether the first interaction (touching) was towards organic or conventional female
 
-simulationOutput <- simulateResiduals(fittedModel = A1st_touching, 
-                                      n = 250)
-simulationOutput
-plot(simulationOutput)
+### Inspect
+summary(exp_1$st_touch)
+table(exp_1$st_touch)
 
-summary(Time_1st_touching)                     
-Anova(Time_1st_touching)
-boxplot(Dataset$Touching_Time_Second~Dataset$Farm)
-#Response: Touching_Time_Second
-#Chisq Df Pr(>Chisq)  
-#Farm 4.9837  1    0.02559 *
+### Generalized linear mixed-effect model----
+st_touch_mod <- lme4::glmer(st_touch ~ Farm_system + (1 | Female_ID), 
+                      data = exp_1, family = binomial)
 
-# Define the order of variables
-variable_order <- c("Organic", "Conventional")
+### Hypothesis test----
+summary(st_touch_mod)                     
+Anova(st_touch_mod)
 
-# Define colors for fill
-variable_colors <- c("Organic" = "skyblue", "Conventional" = "orange")
-# Define color for data points
-data_point_color <- "#FF69B4"  # Pink color for data points
 
-# Create a factor variable with the desired order
-Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
-
-# Plot the figure
-TIME<-ggplot(Dataset, aes(x = Farm, y =Touching_Time_Second, fill = Farm)) +
-  geom_boxplot(color = "black") +
-  # geom_jitter(color = "black", fill = data_point_color, width = 0.2, height = 0, shape = 21, size = 3) +  # Add data points with black border
-  # Customize other plot aesthetics as needed
-  scale_fill_manual(values = variable_colors) +
+### Plot----
+fig6a <- ggplot(exp_1, aes(x = Farm, y = st_touch, fill = Farm_system)) +
+  geom_col(color = "black") +
+  scale_fill_manual(values = c("Organic" = "skyblue", 
+                               "Conventional" = "orange")) +
+  geom_signif(y_position = 11.5, xmin = 0.7, xmax = 2.35,
+              annotation = "p = 0.002", tip_length = 0)+
   xlab("Female origin") +
-  ylab("Time latency (s)") +
-  geom_signif(y_position=750, xmin=0.7, xmax= 2.35,
-              annotation="*", tip_length=0)+
-  theme_classic()+theme(axis.text=element_text(size=17), axis.title=element_text(size=18,face="bold"))+
-  labs(title = "") +  # Add the title of the plot if needed
-  theme_classic() +  # Apply the classic theme
-  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
-        axis.title = element_text(size = 14))  # Increase the size of axis titles
-# Add significance symbols for multiple comparisons
+  ylab("Frequency of 1st interaction") +
+  theme_classic()+
+  theme(axis.text = element_text(size = 10), 
+        axis.title = element_text(size = 12),
+        legend.position = "none",
+        plot.margin = margin(5, 20, 10, 30))
+fig6a
+
+## Save as jpeg:
+ggsave("figures/figure_6a.jpg", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as pdf:
+ggsave("figures/figure_6a.pdf", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as tiff:
+ggsave("figures/figure_6a.tiff", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as png
+ggsave("figures/figure_6a.png", width = 17, height = 13, units = "cm", dpi = 300)
 
 
-#Time males spend touching females
-Time_touching<-glmer(Antennation_Time_interval_sec~Farm+(1|Female_ID), Dataset, family= "poisson")
-summary(Time_touching)                     
-Anova(Time_touching)
+## Time males spend antennating the body of females----
+#With the stopwatch we monitor the time males remained antennating the body of females
 
-#Response: Antennation_Time_interval_sec
-#Chisq Df Pr(>Chisq)  
-#Farm 4.7541  1    0.02923 *
+### Inspect
+summary(exp_1$Antennation_Time_interval_sec)
+stripchart(exp_1$Antennation_Time_interval_sec, method = "stack")
 
-# Define the order of variables
-variable_order <- c("Organic", "Conventional")
+### Generalized linear mixed-effect model----
+time_touch_mod <- lme4::glmer(Antennation_Time_interval_sec ~ Farm_system + 
+                                (1 | Female_ID), exp_1, family = poisson)
 
-# Define colors for fill
-variable_colors <- c("Organic" = "skyblue", "Conventional" = "orange")
-# Define color for data points
-data_point_color <- "#FF69B4"  # Pink color for data points
+### Hypothesis test----
+summary(time_touch_mod)                     
+car::Anova(time_touch_mod)
 
-# Create a factor variable with the desired order
-Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
-
-# Plot the figure
-antenT<-ggplot(Dataset, aes(x = Farm, y =Antennation_Time_interval_sec, fill = Farm)) +
+### Plot----
+# Create a Farm factor to specify the order "Conventional", "Organic" on the X axis of the plot
+exp_1$Farm <- factor(exp_1$Farm_system, 
+                     levels = c("Conventional",
+                                "Organic"))
+fig6b <- ggplot(exp_1, aes(x = Farm, y = Antennation_Time_interval_sec, 
+                           fill = Farm_system)) +
   geom_boxplot(color = "black") +
-  # geom_jitter(color = "black", fill = data_point_color, width = 0.2, height = 0, shape = 21, size = 3) +  # Add data points with black border
-  # Customize other plot aesthetics as needed
-  scale_fill_manual(values = variable_colors) +
+  scale_fill_manual(values = c("Conventional" = "orange", 
+                               "Organic" = "skyblue")) +
   xlab("Female origin") +
   ylab("Time antennating with female (s)") +
-  geom_signif(y_position=150, xmin=0.7, xmax= 2.35,
-              annotation="*", tip_length=0)+
-  theme_classic()+theme(axis.text=element_text(size=17), axis.title=element_text(size=18,face="bold"))+
-  labs(title = "") +  # Add the title of the plot if needed
-  theme_classic() +  # Apply the classic theme
-  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
-        axis.title = element_text(size = 14))  # Increase the size of axis titles
-# Add significance symbols for multiple comparisons
+  geom_signif(y_position = 150, xmin = 0.7, xmax = 2.35,
+              annotation = "p = 0.07", tip_length = 0) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 10), 
+        axis.title = element_text(size = 12),
+        legend.position = "none",
+        plot.margin = margin(5, 20, 10, 30))
+fig6b
 
-Time_mounting<-glmer(Mounting_Time_interval_sec~Farm+(1|Female_ID), Dataset, family= "poisson")
-summary(Time_mounting)                     
-Anova(Time_mounting)
+## Save as jpeg:
+ggsave("figures/figure_6b.jpg", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as pdf:
+ggsave("figures/figure_6b.pdf", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as tiff:
+ggsave("figures/figure_6b.tiff", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as png
+ggsave("figures/figure_6b.png", width = 17, height = 13, units = "cm", dpi = 300)
 
-#Analysis of Deviance Table (Type II Wald chisquare tests)
+## Wing fanning events----
+#We count the number of events males performed wing fanning
 
-#Response: Mounting_Time_interval_sec
-#Chisq Df Pr(>Chisq)
-#Farm 0.5801  1     0.4463
-boxplot(Dataset$Mounting_Time_interval_sec~Dataset$Farm)
-# Define the order of variables
-variable_order <- c("Organic", "Conventional")
+table(exp_1$Wing_fanning)
 
-# Define colors for fill
-variable_colors <- c("Organic" = "#FFFFFF", "Conventional" = "#84BEEF")
-# Define color for data points
-data_point_color <- "#FF69B4"  # Pink color for data points
+### Generalized linear mixed-effect model----
+wing_fan_mod <- lme4::glmer(Wing_fanning ~ Farm_system + 
+                                (1 | Female_ID), exp_1, family = binomial)
 
-# Create a factor variable with the desired order
-Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
+### Hypothesis test----
+summary(wing_fan_mod)                     
+car::Anova(wing_fan_mod)
 
-# Plot the figure
-ggplot(Dataset, aes(x = Farm, y =Mounting_Time_interval_sec, fill = Farm)) +
-  geom_boxplot(color = "black") +
-  geom_jitter(color = "black", fill = data_point_color, width = 0.1, height = 0, shape = 21, size = 3) +  # Add data points with black border
-  # Customize other plot aesthetics as needed
-  scale_fill_manual(values = variable_colors) +
-  xlab("Female origin") +
-  ylab("Time male mounts the female (S)") +
-  labs(title = "") +  # Add the title of the plot if needed
-  theme_classic() +  # Apply the classic theme
-  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
-        axis.title = element_text(size = 14))  # Increase the size of axis titles
-# Add significance symbols for multiple comparisons
-
-
-Copulation_attempt<-glmer(Copulation_Attempt~Farm+(1|Female_ID), Dataset, family= "binomial")
-summary(Copulation_attempt)                     
-Anova(Copulation_attempt)
-boxplot(Dataset$Copulation_Attempt~Dataset$Farm)
-#Response: Copulation_Attempt
-#Chisq Df Pr(>Chisq)  
-#Farm 3.4942  1    0.06158 .
-
-boxplot(Dataset$Copulation_Attempt~Dataset$Farm)
-# Define the order of variables
-variable_order <- c("Organic", "Conventional")
-
-# Define colors for fill
-variable_colors <- c("Organic" = "skyblue", "Conventional" = "orange")
-# Define color for data points
-data_point_color <- "#FF69B4"  # Pink color for data points
-
-# Create a factor variable with the desired order
-Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
-
-# Plot the figure
-cop<-ggplot(Dataset, aes(x = Farm, y =Copulation_Attempt, fill = Farm)) +
+### Plot----
+fig6c <- ggplot(exp_1, aes(x = Farm, y = Wing_fanning, fill = Farm_system)) +
   geom_col(color = "black") +
-  geom_jitter(color = "black", fill = data_point_color, width = 0.1, height = 0, shape = 21, size = 3) +  # Add data points with black border
-  # Customize other plot aesthetics as needed
-  scale_fill_manual(values = variable_colors) +
-  geom_signif(y_position=2, xmin=0.7, xmax= 2.35,
-              annotation=".", tip_length=0)+
+  scale_fill_manual(values = c("Organic" = "skyblue", 
+                               "Conventional" = "orange")) +
+  geom_signif(y_position = 25, xmin = 0.7, xmax = 2.35,
+              annotation = "p = 0.02", tip_length = 0)+
+  xlab("Female origin") +
+  ylab("Wing fanning events") +
+  theme_classic()+
+  theme(axis.text = element_text(size = 10), 
+        axis.title = element_text(size = 12),
+        legend.position = "none",
+        plot.margin = margin(5, 20, 10, 30))
+fig6c
+
+## Save as jpeg:
+ggsave("figures/figure_6c.jpg", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as pdf:
+ggsave("figures/figure_6c.pdf", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as tiff:
+ggsave("figures/figure_6c.tiff", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as png
+ggsave("figures/figure_6c.png", width = 17, height = 13, units = "cm", dpi = 300)
+
+
+## Frequency of copulation attempts----
+#Once on top of the females, males extended the abdomen and attempt to couple genitals
+table(exp_1$Copulation_Attempt)
+
+### Generalized linear mixed-effect model----
+cop_att_mod <- lme4::glmer(Copulation_Attempt ~ Farm_system +
+                       (1 | Female_ID), exp_1, family = binomial)
+
+### Hypothesis test----
+summary(cop_att_mod)                     
+car::Anova(cop_att_mod)
+
+### Plot----
+fig6d <- ggplot(exp_1, aes(x = Farm, y = Copulation_Attempt, fill = Farm_system)) +
+  geom_col(color = "black") +
+  scale_fill_manual(values = c("Organic" = "skyblue", 
+                               "Conventional" = "orange")) +
+  geom_signif(y_position = 22, xmin = 0.7, xmax = 2.35,
+              annotation = "p = 0.02", tip_length = 0)+
   xlab("Female origin") +
   ylab("Copulation attempt events") +
-  labs(title = "") +  # Add the title of the plot if needed
-  theme_classic() +  # Apply the classic theme
-  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
-        axis.title = element_text(size = 14))  # Increase the size of axis titles
+  theme_classic()+
+  theme(axis.text = element_text(size = 10), 
+        axis.title = element_text(size = 12),
+        legend.position = "none",
+        plot.margin = margin(5, 20, 10, 30))
+fig6d
 
-Wing_fanning<-glmer(Wing_fanning~Farm+(1|Female_ID), Dataset, family= "binomial")
-summary(Wing_fanning)                     
-Anova(Wing_fanning)
-#Response: Wing_fanning
-#Chisq Df Pr(>Chisq)  
-#Farm 4.2993  1    0.03813 *
+## Save as jpeg:
+ggsave("figures/figure_6d.jpg", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as pdf:
+ggsave("figures/figure_6d.pdf", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as tiff:
+ggsave("figures/figure_6d.tiff", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as png
+ggsave("figures/figure_6d.png", width = 17, height = 13, units = "cm", dpi = 300)
 
-boxplot(Dataset$Wing_fanning~Dataset$Farm)
+library(gridExtra)
+jpeg("figures/fig6.jpg", width = 20, height = 18, units = "cm", res = 300)
+grid.arrange(arrangeGrob(fig6a, fig6b, fig6c, fig6d, ncol = 2), nrow = 1)  
+dev.off()
 
+# Male choice (experiment 2)----
+#After we altered the olfactory profile of females exposing females from organic farms to two compounds (z)-11-Heptacosene and (z)-9-Nonacosene and watching precopulatory behavior of males
 
+str(exp_2)
 
-variable_order <- c("Organic", "Conventional")
+## Wing fanning events----
+#We count the number of events males performed wing fanning
 
-# Define colors for fill
-variable_colors <- c("Organic" = "skyblue", "Conventional" = "orange")
-# Define color for data points
-data_point_color <- "#FF69B4"  # Pink color for data points
+table(exp_2$Wing_fanning)
 
-# Create a factor variable with the desired order
-Dataset$Farm <- factor(Dataset$Farm, levels = variable_order)
+### Generalized linear mixed-effect model----
+wing_fan_mod2 <- lme4::glmer(Wing_fanning ~ Treatment + 
+                               (1|Female_ID), exp_2, family = binomial)
 
-boxplot((Dataset$Wing_fanning~Dataset$Farm))
+### Hipothesis test----
+summary(wing_fan_mod2)
+Anova(wing_fan_mod2)
 
-# Plot the figure
-Wing<-ggplot(Dataset, aes(x = Farm, y =Wing_fanning, fill = Farm)) +
-  geom_boxplot(color = "black") +
-  geom_jitter(color = "black", fill = data_point_color, width = 0.1, height = 0, shape = 21, size = 3) +  # Add data points with black border
-  # Customize other plot aesthetics as needed
-  scale_fill_manual(values = variable_colors) +
-  geom_signif(y_position=1.5, xmin=0.7, xmax= 2.35,
-              annotation="*", tip_length=0)+
-  xlab("Female origin") +
-  ylab("Wing fanning events") +
-  labs(title = "") +  # Add the title of the plot if needed
-  theme_classic() +  # Apply the classic theme
-  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
-        axis.title = element_text(size = 14))  # Increase the size of axis titles
-
-###FIGURE SIGNIFICANT RESULTS
-##FAZER FIGURA COM MÚLTIPLOS GRÁFICOS
-library("gridExtra")
-grid.arrange(             # First row with one plot spaning over 2 columns
-  arrangeGrob(TIME,antenT,Wing,cop,ncol = 2), # Second row with 2 plots in 2 different columns
-  nrow = 1)  
-
-
-
-###Experiment 3-> exposing females from organic farms to two compounds (z)-11-Heptacosene and (z)-9-Nonacosene and watching precopulatory behavior of males
-setwd("~/OneDrive/Alunos/Irem_Gülsoy")
-Dataset<-read_excel(file.choose())
-View(Dataset)
-str(Dataset)
-Dataset$Application<-as.factor(Dataset$Application)
-shapiro.test(Dataset$Antennation_Time_interval_Seconds) #p<0.05
-
-Anten_time<-glmer (Antennation_Time_interval_Seconds~Application+(1|Female_ID), Dataset, family = "poisson")
-summary(Anten_time)
-Anova(Anten_time)
-#Response: Antennation_Time_interval_Seconds
-#Chisq Df Pr(>Chisq)
-#Application  1.13  1     0.2878
-
-Mounting_Time<-glmer(Mounting_Time_interval_seconds~Application+(1|Female_ID), Dataset, family = "poisson")
-summary(Mounting_Time)
-Anova(Mounting_Time)
-#Response: Mounting_Time_interval_seconds
-#Chisq Df Pr(>Chisq)
-#Application 0.4171  1     0.5184
-
-wing_fan<-glmer(Wing_fanning~Application+(1|Female_ID), Dataset, family = "binomial")
-summary(wing_fan)
-Anova(wing_fan)
-#Response: Wing_fanning
-#Chisq Df Pr(>Chisq)  
-#Application 6.0024  1    0.01429 *
-
-variable_order <- c("Pentane", "(Z)11_C27en+(Z)9_C29en")
-
-# Define colors for fill
-variable_colors <- c("Pentane" = "skyblue", "(Z)11_C27en+(Z)9_C29en" = "orange")
-# Define color for data points
-data_point_color <- "#FF69B4"  # Pink color for data points
-
-# Create a factor variable with the desired order
-Dataset$Application <- factor(Dataset$Application, levels = variable_order)
-
-# Plot the figure
-ggplot(Dataset, aes(x = Application, y =Wing_fanning, fill = Application)) +
+### Plot----
+ggplot(exp_2, aes(x = Treatment, y = Wing_fanning, fill = Treatment)) +
   geom_col(color = "black") +
-  #geom_jitter(color = "black", fill = data_point_color, width = 0.1, height = 0, shape = 21, size = 3) +  # Add data points with black border
-  # Customize other plot aesthetics as needed
-  scale_fill_manual(values = variable_colors) +
-  geom_signif(y_position=25, xmin=0.7, xmax= 2.35,
-              annotation="*", tip_length=0)+
-  xlab("Chemical compounds") +
+  scale_fill_manual(values = c("Control (Pentane)" = "skyblue", 
+                               "Synthetic compounds" = "orange")) +
+  geom_signif(y_position = 25, xmin = 0.7, xmax = 2.35,
+              annotation = "p = 0.01", tip_length = 0)+
+  xlab("Treatment") +
   ylab("Wing fanning events") +
-  labs(title = "") +  # Add the title of the plot if needed
-  theme_classic() +  # Apply the classic theme
-  theme(axis.text = element_text(size = 12),  # Increase the size of axis labels
-        axis.title = element_text(size = 14))  # Increase the size of axis titles
+  theme_classic()+
+  theme(axis.text = element_text(size = 12), 
+        axis.title = element_text(size = 14),
+        legend.position = "none")
 
-copul<-glmmTMB(Copulation_Attempt~Application+(1|Female_ID), Dataset, family = "binomial")
-summary(copul)
-Anova(copul)
-#Response: Copulation_Attempt
-#Chisq Df Pr(>Chisq)
-#Application     0  1     0.9995
 
-compet<-glmer(Competition~Application+(1|Female_ID), Dataset, family = "binomial")
-summary(copul)
-Anova(copul)
-#Response: Copulation_Attempt
-#Chisq Df Pr(>Chisq)
-#Application     0  1     0.9995
+## Save as jpeg:
+ggsave("figures/figure_7.jpg", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as pdf:
+ggsave("figures/figure_7.pdf", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as tiff:
+ggsave("figures/figure_7.tiff", width = 17, height = 13, units = "cm", dpi = 300)
+## Save as png
+ggsave("figures/figure_7.png", width = 17, height = 13, units = "cm", dpi = 300)
+
+## Frequency of first interaction----
+st_touch_mod2 <- lme4::glmer(st_touch ~ Treatment + (1 | Female_ID), 
+                            data = exp_2, family = binomial)
+
+### Hypothesis test----
+summary(st_touch_mod2)                     
+Anova(st_touch_mod2)
+
+
+## Time males spend antennating the body of females----
+
+### Generalized linear mixed-effect model----
+time_touch_mod2 <- lme4::glmer(Antennation_Time_interval_sec ~ Treatment + 
+                                 (1|Female_ID), exp_2, family = poisson)
+
+### Hipothesis test----
+summary(time_touch_mod2)
+car::Anova(time_touch_mod2)
+
